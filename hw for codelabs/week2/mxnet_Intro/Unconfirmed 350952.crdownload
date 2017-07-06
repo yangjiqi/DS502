@@ -1,0 +1,114 @@
+import os
+import argparse
+import logging
+logging.basicConfig(level=logging.DEBUG)
+from common import find_mxnet, data, fit
+from common.util import download_file
+import mxnet as mx
+MODE = 1
+import numpy as np
+import mxnet as mx
+from tensorboard import summary
+from tensorboard import FileWriter
+
+NUM_EXAMPLE = 50000
+BATCH_SIZE = 128
+# setup tensorboard
+logdir = './logs/'
+summary_writer = FileWriter(logdir)
+# mx.mon.Monitor's callback 
+def get_gradient(g):
+    # get flatten list
+    grad = g.asnumpy().flatten()
+    # logging using tensorboard, use histogram type.
+    s = summary.histogram('fc1_backward_weight', grad)
+    summary_writer.add_summary(s)
+    return mx.nd.norm(g)/np.sqrt(g.size)
+#int(NUM_EXAMPLE/BATCH_SIZE)
+mon = mx.mon.Monitor(1, get_gradient, pattern='fc1_backward_weight')  
+
+def download_cifar10():
+    data_dir="data"
+    fnames = (os.path.join(data_dir, "cifar10_train.rec"),
+              os.path.join(data_dir, "cifar10_val.rec"))
+    download_file('http://data.mxnet.io/data/cifar10/cifar10_val.rec', fnames[1])
+    download_file('http://data.mxnet.io/data/cifar10/cifar10_train.rec', fnames[0])
+    return fnames
+
+#def norm_stat(d):
+#    return mx.nd.norm(d)/np.sqrt(d.size)
+#mon = mx.mon.Monitor(100, norm_stat)
+
+if __name__ == '__main__':
+    # download data
+    (train_fname, val_fname) = download_cifar10()
+
+    # parse args
+    parser = argparse.ArgumentParser(description="train cifar10",                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    fit.add_fit_args(parser)
+    data.add_data_args(parser)
+    data.add_data_aug_args(parser)
+    data.set_data_aug_level(parser, 2)
+    parser.set_defaults(
+        # network
+        network        = 'resnet',
+        num_layers     = 20,
+        # data
+        data_train     = train_fname,
+        data_val       = val_fname,
+        num_classes    = 10,
+        num_examples  = 50000,
+        image_shape    = '3,28,28',
+        pad_size       = 4,
+        # train
+        batch_size     = 128,
+        num_epochs     = 300,
+        lr             = .05,
+        lr_step_epochs = '200,250',
+    )
+    args = parser.parse_args()
+    # read rec data based on the parse above 
+    train_rec, val_rec = data.get_rec_iter(args)
+    print (train_rec, val_rec)
+    
+    ####################Symbol Setup
+    from importlib import import_module
+    net = import_module('symbols.'+'resnet')
+    sym = net.get_symbol(10,20,"3,28,28")
+    model_prefix = 'cifar10_resnet'
+    check_point = mx.callback.do_checkpoint(model_prefix)
+    arg_name = sym.list_arguments()
+    out_name = sym.list_outputs()
+    print (arg_name)
+    print (out_name)
+    
+    ####################setup training 
+    mod = mx.mod.Module(context=[mx.gpu(0)],
+                        symbol=sym,
+                        data_names=['data'],
+                        label_names=['softmax_label'])
+    mod.bind(train_rec.provide_data, train_rec.provide_label)
+    mod.init_params(mx.init.Xavier(magnitude=2.0))
+    mod.init_optimizer('sgd',optimizer_params=(('learning_rate', 0.1), ))
+
+    if MODE == 1:
+        mod.fit(train_rec,
+               num_epoch=10,
+               eval_metric = ['ce'],
+               epoch_end_callback = check_point,
+               monitor = mon,
+               batch_end_callback=[mx.callback.Speedometer(128)])
+    elif MODE == 2:
+        metric = mx.metric.create('acc')
+        for epoch in range(5):
+            train_rec.reset()
+            metric.reset()
+            for batch in train_rec:
+                mod.forward(batch, is_train=True)
+                mod.update_metric(metric, batch.label)
+                mod.backward()
+                mod.update()
+            print ('Epoch {}, Train {}'.format(epoch, metric.get()))
+
+# close summary_writer
+summary_writer.close()
