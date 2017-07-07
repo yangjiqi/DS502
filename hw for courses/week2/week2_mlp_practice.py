@@ -9,7 +9,7 @@ def sigmoid(x):
     :return: simgoid value (array like)
     """
 
-    #TODO sigmoid function
+    # TODO sigmoid function
     return 1.0 / (1.0 + np.exp(-x))
 
 
@@ -19,9 +19,9 @@ def dsigmoid(x):
     :param x: array-like shape(n_sample, n_feature)
     :return: derivative value (array like)
     """
-    #TODO dsigmoid function
-    return sigmoid(x) * (1 - sigmoid(x))
-
+    # TODO dsigmoid function
+    # return sigmoid(x) * (1 - sigmoid(x))
+    return x * (1 - x)
 
 def tanh(x):
     """
@@ -29,7 +29,7 @@ def tanh(x):
     :param x: array-like shape(n_sample, n_feature)
     :return: tanh value (array like)
     """
-    #TODO tanh function
+    # TODO tanh function
     return 2.0 / (1 + np.exp(-2 * x)) - 1
 
 
@@ -39,8 +39,9 @@ def dtanh(x):
     :param x: array-like shape(n_sample, n_feature)
     :return: derivative value (array like)
     """
-    #TODO dtanh function
-    return 1 - tanh(x) ** 2
+    # TODO dtanh function
+    # return 1 - tanh(x) ** 2
+    return 1 - x ** 2
 
 
 def softmax(X):
@@ -49,12 +50,13 @@ def softmax(X):
     :param X:
     :return: softmax value (array like)
     """
-    #TODO softmax function
+    # TODO softmax function
     return (np.exp(X).T / np.sum(np.exp(X), axis=1)).T
 
 
 class MLP:
-    def __init__(self, input_size, output_size, hidden_layer_size=[100], batch_size=200, activation="sigmoid", output_layer='softmax', loss='cross_entropy', lr=0.01, reg_lambda=0.0001, momentum=0.9, verbose=10):
+    def __init__(self, input_size, output_size, hidden_layer_size=[100], batch_size=200, activation="sigmoid",
+                 output_layer='softmax', loss='cross_entropy', lr=0.01, reg_lambda=0.0001, momentum=0.9, verbose=10):
         """
         Multilayer perceptron Class
         :param input_size: int, input size (n_feature)
@@ -76,7 +78,7 @@ class MLP:
         self.reg_lambda = reg_lambda
         self.momentum = momentum
         self.batch_size = batch_size
-        self.n_layers = len(hidden_layer_size) # only hidden layers
+        self.n_layers = len(hidden_layer_size)  # only hidden layers
         self.activation = activation
         self.verbose = verbose
 
@@ -97,10 +99,10 @@ class MLP:
 
         self.nclass = output_size
 
-        self.weights = []   # store weights
-        self.bias = []      # store bias
-        self.layers = []    # store forwarding activation values
-        self.deltas = []    # store errors for backprop
+        self.weights = []  # store weights
+        self.bias = []  # store bias
+        self.layers = []  # store forwarding activation values
+        self.deltas = []  # store errors for backprop
 
     def get_weight_bound(self, fan_in, fan_out):
         """
@@ -136,13 +138,15 @@ class MLP:
 
         # Weights and bias connecting hidden layers
         for i in range(1, len(self.hidden_layer_size)):
-            init_bound = self.get_weight_bound(self.hidden_layer_size[i-1], self.hidden_layer_size[i])
-            self.weights.append(np.random.uniform(-init_bound, init_bound, size=(self.hidden_layer_size[i-1], self.hidden_layer_size[i])))
+            init_bound = self.get_weight_bound(self.hidden_layer_size[i - 1], self.hidden_layer_size[i])
+            self.weights.append(np.random.uniform(-init_bound, init_bound,
+                                                  size=(self.hidden_layer_size[i - 1], self.hidden_layer_size[i])))
             self.bias.append(np.random.uniform(-init_bound, init_bound, self.hidden_layer_size[i]))
 
         # Weights and bias connecting last hidden layer and output layer
         init_bound = self.get_weight_bound(self.hidden_layer_size[-1], self.output_size)
-        self.weights.append(np.random.uniform(-init_bound, init_bound, size=(self.hidden_layer_size[-1], self.output_size)))
+        self.weights.append(
+            np.random.uniform(-init_bound, init_bound, size=(self.hidden_layer_size[-1], self.output_size)))
         self.bias.append(np.random.uniform(-init_bound, init_bound, self.output_size))
 
         # pre-allocate memory for both activations and errors
@@ -160,18 +164,17 @@ class MLP:
         for i in xrange(max_epochs):
 
             # shuffle data
-            #TODO shuffle data
+            # TODO shuffle data
             if shuffle_data == True:
                 permutation = np.random.permutation(X.shape[0])
                 X = X[permutation, :]
                 y = y[permutation]
 
-
             # iterate every batch
             for batch in xrange(0, n_samples, self.batch_size):
-                #TODO call forward function
+                # TODO call forward function
                 self.forward(X[batch: batch + self.batch_size, :])
-                #TODO call backward function
+                # TODO call backward function
                 # self.backward(X, y)
                 self.backward(X[batch:batch + self.batch_size, :], y[batch:batch + self.batch_size])
 
@@ -190,12 +193,11 @@ class MLP:
         :param y: label, array-like, shape(n_sample, 1)
         :return: loss value
         """
-        n_samples = X.shape[0] # rows -> cases, cols -> features
+        n_samples = X.shape[0]  # rows -> cases, cols -> features
         probs = self.forward(X)
 
         # TODO Calculating the loss
         data_loss = np.sum(- np.array([y]).T * np.log(probs) - np.array([1 - y]).T * np.log(1 - probs))
-
 
         # TODO Add regularization term to loss
         data_loss += np.sum(self.weights[-1] ** 2) * self.reg_lambda / 2.
@@ -211,11 +213,10 @@ class MLP:
             z = np.dot(self.layers[i], self.weights[i]) + self.bias[i]
             self.layers[i + 1] = self.activation_func(z)
 
-
         # TODO output layer (Note here the activation is using output_layer func)
         self.layers[-1] = self.output_layer(np.dot(self.layers[-2], self.weights[-1]) + self.bias[-1])
 
-        return self.layers[-1] # rows for cases, cols for sigmoids/ softmaxs
+        return self.layers[-1]  # rows for cases, cols for sigmoids/ softmaxs
 
     def backward(self, X, y):
         if self.loss == 'cross_entropy':
@@ -230,15 +231,12 @@ class MLP:
             a = self.activation_dfunc(self.layers[i + 1])
             self.deltas[i] = np.dot(self.deltas[i + 1], self.weights[i + 1].T) * a
 
-
-
         # TODO update weights
         for i in range(self.n_layers + 1):
-            dW = np.dot(self.layers[i].T, self.deltas[i]) + self.reg_lambda * np.sum(self.weights[i], axis = 0).T
+            dW = np.dot(self.layers[i].T, self.deltas[i]) + self.reg_lambda * np.sum(self.weights[i], axis=0).T
             self.weights[i] -= self.lr * dW
 
-            self.bias[i] -= self.lr * np.sum(self.deltas[i], axis = 0)
-
+            self.bias[i] -= self.lr * np.sum(self.deltas[i], axis=0)
 
     def predict(self, X):
         """
@@ -256,12 +254,12 @@ class MLP:
         :return: float, accuracy
         """
         n_samples = X.shape[0]
-        
+
         # TODO compute accuracy
         pred = self.forward(X)
-        maxPredIndex = np.argmax(pred, axis = 1)
+        maxPredIndex = np.argmax(pred, axis=1)
         correct = np.sum(maxPredIndex == y)
-        acc = correct * 1./ n_samples
+        acc = correct * 1. / n_samples
         # class = pred.shape[1]
         # newY =
 
@@ -269,13 +267,12 @@ class MLP:
         return acc
 
 
-
 def my_mlp():
-    #from sklearn.datasets import fetch_mldata
-    #mnist = fetch_mldata("MNIST original")
-    #X, y = mnist.data / 255., mnist.target
-    #X_train, X_test = X[:60000], X[60000:]
-    #y_train, y_test = y[:60000], y[60000:]
+    # from sklearn.datasets import fetch_mldata
+    # mnist = fetch_mldata("MNIST original")
+    # X, y = mnist.data / 255., mnist.target
+    # X_train, X_test = X[:60000], X[60000:]
+    # y_train, y_test = y[:60000], y[60000:]
 
     import sklearn.datasets
     dataset = sklearn.datasets.load_digits()
@@ -285,14 +282,12 @@ def my_mlp():
     y_test = dataset.target[1500:]
 
     network = MLP(input_size=64, output_size=10, hidden_layer_size=[128], batch_size=200, activation="sigmoid",
-                  output_layer='softmax', loss='cross_entropy', lr=0.1)
+                  output_layer='softmax', loss='cross_entropy', lr=0.001)
 
     network.fit(X_train, y_train, 100, True)
 
     acc = network.score(X_test, y_test)
     print('Test Accuracy: {}'.format(acc))
-
-
 
 
 def sklearn_mlp():
@@ -309,8 +304,8 @@ def sklearn_mlp():
     dataset = sklearn.datasets.load_digits()
     X_train = dataset.data[:1500]  # (1500, 64)
     X_test = dataset.data[1500:]  # (297, 64)
-    y_train = dataset.target[:1500] # (1500,)
-    y_test = dataset.target[1500:] # (297,)
+    y_train = dataset.target[:1500]  # (1500,)
+    y_test = dataset.target[1500:]  # (297,)
 
     mlp = MLPClassifier(hidden_layer_sizes=(128), max_iter=100, alpha=1e-4,
                         solver='sgd', activation='logistic', verbose=10, tol=1e-4, random_state=1,
@@ -318,7 +313,6 @@ def sklearn_mlp():
     mlp.fit(X_train, y_train)
     print("Training set score: %f" % mlp.score(X_train, y_train))
     print("Test set score: %f" % mlp.score(X_test, y_test))
-
 
 
 def main():
