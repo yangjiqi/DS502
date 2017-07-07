@@ -1,2 +1,6 @@
 # DS502
-BitTiger-AI
+## BitTiger-AI
+### Jiqi Jason Yang
+- caffe
+- mxnet
+- tensorflow
