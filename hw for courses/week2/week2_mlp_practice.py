@@ -194,7 +194,7 @@ class MLP:
         probs = self.forward(X)
 
         # TODO Calculating the loss
-        data_loss = np.sum(- np.array([y]).T * np.log(probs) - np.array([1-y]).T * np.log(1 - probs))
+        data_loss = np.sum(- np.array([y]).T * np.log(probs) - np.array([1 - y]).T * np.log(1 - probs))
 
 
         # TODO Add regularization term to loss
@@ -207,7 +207,7 @@ class MLP:
         self.layers[0] = X
 
         # TODO hidden layers
-        for i in range(len(self.hidden_layer_size)):
+        for i in range(self.n_layers):
             z = np.dot(self.layers[i], self.weights[i]) + self.bias[i]
             self.layers[i + 1] = self.activation_func(z)
 
@@ -226,17 +226,18 @@ class MLP:
         # TODO update deltas
         # for i in range(len(self.hidden_layer_size) - 1, -1, -1):
 
-        for i in range(self.n_layers, 0, -1):
-            z = np.dot(self.layers[i - 1], self.weights[i - 1]) + self.bias[i - 1]
-            a = self.activation_dfunc(z)
-            self.deltas[i - 1] = np.dot(self.deltas[i], self.weights[i].T) * a
+        for i in range(self.n_layers - 1, -1, -1):
+            a = self.activation_dfunc(self.layers[i + 1])
+            self.deltas[i] = np.dot(self.deltas[i + 1], self.weights[i + 1].T) * a
 
 
 
         # TODO update weights
-        for i in range(self.n_layers, -1, -1):
-            self.weights[i] -= self.lr * a * self.deltas[i] + self.reg_lambda * self.wei
-            self.bias[i] -= self.lr * self.deltas[i]
+        for i in range(self.n_layers + 1):
+            dW = np.dot(self.layers[i].T, self.deltas[i]) + self.reg_lambda * np.sum(self.weights[i], axis = 0).T
+            self.weights[i] -= self.lr * dW
+
+            self.bias[i] -= self.lr * np.sum(self.deltas[i], axis = 0)
 
 
     def predict(self, X):
