@@ -230,30 +230,14 @@ class MLP:
             # cross_entropy loss backprop
             self.deltas[-1][range(X.shape[0]), y] -= 1
 
-        # TODO update deltas
-        # for i in range(len(self.hidden_layer_size) - 1, -1, -1):
+        # update deltas
+        for i in range(len(self.layers)-3, -1, -1):
+            self.deltas[i] = np.dot(self.deltas[i+1], self.weights[i+1].T) * self.activation_dfunc(self.layers[i+1])
 
-        for i in range(self.n_layers - 1, -1, -1):
-            a = self.activation_dfunc(self.layers[i + 1])
-            self.deltas[i] = np.dot(self.deltas[i + 1], self.weights[i + 1].T) * a
-
-        # TODO update weights
-        for i in range(self.n_layers, -1, -1): # n_layers itself
-            dW = np.dot(self.layers[i].T, self.deltas[i]) + self.reg_lambda * self.weights[i]
-            dW += self.momentum * self.dw[i]
-            self.weights[i] -= self.lr * dW
-            self.dw[i] = dW
-
-            db = self.lr * np.sum(self.deltas[i], axis=0)
-            db += self.momentum * self.db[i]
-            self.db[i] = db
-            self.bias[i] -= self.lr * np.sum(self.deltas[i], axis=0)
-            # Problem 1
-            # without momentum, with lr = 0.01, the result could be sometimes very good and sometimes very bad
-            # with momentum, with lr = 0.01, the result accuracy is always around 0.1 (very bad?)
-
-            # Problem 2
-            # sometimes the model seems to fall into the local optimum, how to get out of the local optimum?
+        # update weights
+        for i in range(len(self.weights)-1, -1, -1):
+            self.weights[i] += -self.lr / self.batch_size * (np.dot(self.layers[i].T, self.deltas[i]) + self.reg_lambda * self.weights[i])
+            self.bias[i] += -self.lr * np.mean(self.deltas[i], axis=0)
 
 
     def predict(self, X):
