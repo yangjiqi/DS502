@@ -2,6 +2,9 @@ from pandas import read_csv
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
+import sklearn.linear_model as linear_model
+import sklearn.metrics as metrics
+import sklearn
 
 def data_preprocessing(shuffle_data = False):
     # read source data from csv file
@@ -59,8 +62,9 @@ def logistic_grad_func(theta, x, y):
 
     return grad
 
-def mini_batch_gradient_descent(theta, X_train, y_train, lr=0.01, epochs=500,
-                                  batch_size=10,
+def mini_batch_gradient_descent(theta, X_train, y_train, lr=0.001, epochs=1000,
+                                  batch_size=50,
+                                  momentum_flag = False,
                                   momentum=0.9,
                                   epsilon=1e-3,
                                   verbose = False,
@@ -73,16 +77,20 @@ def mini_batch_gradient_descent(theta, X_train, y_train, lr=0.01, epochs=500,
     error_list.append(cost)
 
     for epoch in range(epochs):
+        prev_theta = 0
         for batch_i in range(m // batch_size):
             batch_X = X_train[batch_i * batch_size:(batch_i + 1) * batch_size]
             batch_y = y_train[batch_i * batch_size:(batch_i + 1) * batch_size]
 
             grad = logistic_grad_func(theta, batch_X, batch_y)
-            theta = theta - lr * (grad * 1.0 / batch_size)
-            error_list.append(np.sum(grad) ** 2)
+            if momentum_flag:
+                theta -= (lr * (grad * 1.0 / batch_size) - momentum * prev_theta)
+                prev_theta = theta
+            else:
+                theta -= lr * (grad * 1.0 / batch_size)
 
         cost = logistic_cost_func(theta, X_train, y_train)
-        error_list.append( cost)
+        error_list.append(cost)
         if verbose:
             print ("epoch:{0} cost:{1}".format(epoch, error_list[-1]))
 
@@ -109,14 +117,28 @@ def accuracy(theta, X_test, y_test):
     correct = np.sum((pred_val(theta, X_test) == y_test))
     return correct * 1.0 / X_test.shape[0]
 
+def f1_score(X_train, X_test, y_train, y_test):
+    cls = linear_model.LogisticRegression()
+
+    cls.fit(X_train, y_train)
+    y_pred = cls.predict(X_test)
+    cm = metrics.confusion_matrix(y_test, y_pred)
+    f1 = sklearn.metrics.f1_score(y_test, y_pred)
+    return cm, f1
+
 
 if __name__ == '__main__':
     # simple mini-batch
     X, y = data_preprocessing()
     X_train, X_test, y_train, y_test = split_data(X, y)
 
-    theta = np.random.rand(1, X_train.shape[1] + 1)
-    theta, error_list = mini_batch_gradient_descent(theta, X_train, y_train)
-    print("Accuracy of mini-batch : {}".format(accuracy(theta, X_test, y_test)))
+    theta1 = np.random.rand(1, X_train.shape[1] + 1)
+    theta1, error_list = mini_batch_gradient_descent(theta1, X_train, y_train)
+    # cm1, f1_1 = f1_score(X_train, X_test, y_train, y_test)
+    print("Accuracy of mini-batch : {}".format(accuracy(theta1, X_test, y_test)))
+    # print("metrics:\n {}".format(cm1))
+    # print("f1 score: {}".format(f1_1))
 
-
+    theta2 = np.random.rand(1, X_train.shape[1] + 1)
+    theta2, error_list = mini_batch_gradient_descent(theta2, X_train, y_train, momentum_flag=True)
+    print("Accuracy of mini-batch with momentum(0.9) : {}".format(accuracy(theta2, X_test, y_test)))
