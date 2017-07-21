@@ -29,6 +29,7 @@ def data_preprocessing(shuffle_data = False):
         permutation = np.random.permutation(X.shape[0])
         X = X[permutation, :]
         y = y[permutation]
+    # X, y = Shuffle(X, y)
 
     return X, y
 
@@ -62,11 +63,11 @@ def logistic_grad_func(theta, x, y):
 
     return grad
 
-def mini_batch_gradient_descent(theta, X_train, y_train, lr=0.001, epochs=1000,
+def mini_batch_gradient_descent(theta, X_train, y_train, lr=0.00001, epochs=1000,
                                   batch_size=50,
                                   momentum_flag = False,
                                   momentum=0.9,
-                                  epsilon=1e-3,
+                                  epsilon=1e-20,
                                   verbose = False,
                                   ):
     m = len(X_train)
@@ -81,13 +82,15 @@ def mini_batch_gradient_descent(theta, X_train, y_train, lr=0.001, epochs=1000,
         for batch_i in range(m // batch_size):
             batch_X = X_train[batch_i * batch_size:(batch_i + 1) * batch_size]
             batch_y = y_train[batch_i * batch_size:(batch_i + 1) * batch_size]
-
+            # print(batch_i + 1)
             grad = logistic_grad_func(theta, batch_X, batch_y)
             if momentum_flag:
                 theta -= (lr * (grad * 1.0 / batch_size) - momentum * prev_theta)
-                prev_theta = theta
+                prev_theta = lr * (grad * 1.0 / batch_size) - momentum * prev_theta
             else:
                 theta -= lr * (grad * 1.0 / batch_size)
+
+            # print("batch cost ", logistic_cost_func(theta, batch_X, batch_y))
 
         cost = logistic_cost_func(theta, X_train, y_train)
         error_list.append(cost)
